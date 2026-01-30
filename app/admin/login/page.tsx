@@ -1,11 +1,8 @@
 "use client";
+
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useEffect } from "react";
-
-
-
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -13,133 +10,96 @@ export default function AdminLogin() {
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-
-  const signIn = async () => {
+  const signIn = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setMsg(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // 🔍 DEBUG: ver si hay sesión previa
+      const { data } = await supabase.auth.getSession();
+      console.log("SESSION ANTES DE LOGIN:", data.session);
 
-    setLoading(false);
-    setMsg(error ? `Error: ${error.message}` : "✅ Login correcto");
-    router.push("/admin/parts");
-  return;
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.log("ERROR LOGIN:", error.message);
+        setMsg(error.message);
+        return;
+      }
+
+      setMsg("✅ Login correcto");
+      inputRef.current?.blur();
+      router.replace("/admin/parts");
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => {
-  supabase.auth.getUser().then(({ data }) => {
-    if (data.user) router.push("/admin/parts");
-  });
-}, [router]);
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        background: "#0b0b0f",
-        padding: 16,
-        color: "#eaeaf0",
-        fontFamily:
-          'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial',
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 420,
-          background: "#12121a",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 16,
-          padding: 18,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
-        }}
+    <div className="flex min-h-dvh items-center justify-center bg-[#0b0b0f] px-4">
+      <form
+        onSubmit={signIn}
+        className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-[#111118] p-6 shadow-xl"
       >
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>
-          Login empleados
-        </h1>
-        <p style={{ marginTop: 6, marginBottom: 14, color: "rgba(234,234,240,0.7)" }}>
-          Acceso para editar el catálogo
-        </p>
+        <div className="space-y-1 text-center">
+          <h1 className="text-xl font-semibold text-white">
+            Auto Eléctrica RB
+          </h1>
+          <p className="text-sm text-white/60">
+            Panel de empleados
+          </p>
+        </div>
 
-        <label style={{ fontSize: 13, color: "rgba(234,234,240,0.75)" }}>
-          Email
-        </label>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="correo@empresa.com"
-          style={{
-            width: "100%",
-            marginTop: 6,
-            marginBottom: 12,
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "#0b0b0f",
-            color: "#eaeaf0",
-            outline: "none",
-          }}
-        />
+        <div className="space-y-1">
+          <label className="text-sm text-white/70">Correo</label>
+          <input
+            ref={inputRef}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="correo@empresa.com"
+            className="h-11 w-full rounded-xl border border-white/10 bg-[#0b0b0f] px-3 text-white outline-none focus:border-[#9A99FF]"
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+        </div>
 
-        <label style={{ fontSize: 13, color: "rgba(234,234,240,0.75)" }}>
-          Password
-        </label>
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          type="password"
-          style={{
-            width: "100%",
-            marginTop: 6,
-            marginBottom: 12,
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "#0b0b0f",
-            color: "#eaeaf0",
-            outline: "none",
-          }}
-        />
+        <div className="space-y-1">
+          <label className="text-sm text-white/70">Contraseña</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="h-11 w-full rounded-xl border border-white/10 bg-[#0b0b0f] px-3 text-white outline-none focus:border-[#9A99FF]"
+            enterKeyHint="go"
+          />
+        </div>
+
+        {msg && (
+          <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+            {msg}
+          </div>
+        )}
 
         <button
-          onClick={signIn}
+          type="submit"
           disabled={loading}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: loading ? "#2a2a38" : "#1f6feb",
-            color: "#fff",
-            fontWeight: 700,
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
+          className="h-11 w-full rounded-xl bg-[#9A99FF] font-medium text-black transition disabled:opacity-60"
         >
           {loading ? "Entrando..." : "Entrar"}
         </button>
 
-        {msg && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "#eaeaf0",
-              fontSize: 13,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {msg}
-          </div>
-        )}
-      </div>
+        <p className="text-center text-xs text-white/40">
+          Login de pruebas
+        </p>
+      </form>
     </div>
   );
 }
